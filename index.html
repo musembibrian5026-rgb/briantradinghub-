@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deriv Custom Trader</title>
+    <style>
+        /* Mobile-friendly styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 450px;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-sizing: border-box;
+        }
+        h2 {
+            text-align: center;
+            color: #ff4444;
+            margin-top: 0;
+        }
+        .status {
+            text-align: center;
+            padding: 8px;
+            margin-bottom: 15px;
+            background: #2a2a2a;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #aaa;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            background: #2d2d2d;
+            color: white;
+            font-size: 16px; /* Prevents iOS from auto-zooming on focus */
+            box-sizing: border-box;
+        }
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: #ff4444;
+            border: none;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:active {
+            background: #cc3333; /* Visual feedback for touch screens */
+        }
+        #tick-display {
+            font-size: 32px;
+            text-align: center;
+            margin: 20px 0;
+            font-weight: bold;
+            color: #00ff00;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Deriv Matches/Differs</h2>
+    <div class="status" id="connection-status">Connecting to Deriv...</div>
+    
+    <!-- Live Tick Stream Display -->
+    <div id="tick-display">0.000</div>
+
+    <!-- Trade Inputs -->
+    <div class="input-group">
+        <label>Volatility Index</label>
+        <select id="market">
+            <option value="R_100">Volatility 100 Index</option>
+            <option value="R_10">Volatility 10 Index</option>
+            <option value="R_25">Volatility 25 Index</option>
+            <option value="R_50">Volatility 50 Index</option>
+            <option value="R_75">Volatility 75 Index</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label>Stake (USD)</label>
+        <input type="number" id="stake" value="1.00" step="0.50">
+    </div>
+
+    <div class="input-group">
+        <label>Last Digit Prediction (0-9)</label>
+        <input type="number" id="prediction" value="5" min="0" max="9">
+    </div>
+
+    <div class="input-group">
+        <label>Trade Type</label>
+        <select id="trade-type">
+            <option value="DIGITMATCH">Matches</option>
+            <option value="DIGITDIFF">Differs</option>
+        </select>
+    </div>
+
+    <!-- Action Button -->
+    <button class="btn" id="buy-btn">PURCHASE CONTRACT</button>
+</div>
+
+<script>
+    // This is where our WebSocket JavaScript logic will live next!
+    console.log("UI Loaded. Ready for API connection script.");
+</script>
+
+</body>
+</html>
