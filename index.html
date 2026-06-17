@@ -1,133 +1,105 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deriv Custom Trader</title>
-    <style>
-        /* Mobile-friendly styling */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: #ffffff;
-            margin: 0;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 450px;
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            box-sizing: border-box;
-        }
-        h2 {
-            text-align: center;
-            color: #ff4444;
-            margin-top: 0;
-        }
-        .status {
-            text-align: center;
-            padding: 8px;
-            margin-bottom: 15px;
-            background: #2a2a2a;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-        .input-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 14px;
-            color: #aaa;
-        }
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border-radius: 5px;
-            border: 1px solid #333;
-            background: #2d2d2d;
-            color: white;
-            font-size: 16px; /* Prevents iOS from auto-zooming on focus */
-            box-sizing: border-box;
-        }
-        .btn {
-            width: 100%;
-            padding: 15px;
-            background: #ff4444;
-            border: none;
-            color: white;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .btn:active {
-            background: #cc3333; /* Visual feedback for touch screens */
-        }
-        #tick-display {
-            font-size: 32px;
-            text-align: center;
-            margin: 20px 0;
-            font-weight: bold;
-            color: #00ff00;
-        }
-    </style>
-</head>
-<body>
+// --- CONFIGURATION ---
+// Replace 'YOUR_APP_ID' with your actual Deriv App ID. (Default 1089 is the free demo app ID for testing)
+const APP_ID = '1089'; 
+const TOKEN =pat_61fa8a9f57830c8ac1563f9046f80b079ee3510ea51ed1910de12642d0c08aea'; // Place your real or demo API token here
 
-<div class="container">
-    <h2>Deriv Matches/Differs</h2>
-    <div class="status" id="connection-status">Connecting to Deriv...</div>
-    
-    <!-- Live Tick Stream Display -->
-    <div id="tick-display">0.000</div>
+let ws;
+let currentTick = null;
 
-    <!-- Trade Inputs -->
-    <div class="input-group">
-        <label>Volatility Index</label>
-        <select id="market">
-            <option value="R_100">Volatility 100 Index</option>
-            <option value="R_10">Volatility 10 Index</option>
-            <option value="R_25">Volatility 25 Index</option>
-            <option value="R_50">Volatility 50 Index</option>
-            <option value="R_75">Volatility 75 Index</option>
-        </select>
-    </div>
+// Initialize the WebSocket connection
+function connectDeriv() {
+    ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${APP_ID}`);
 
-    <div class="input-group">
-        <label>Stake (USD)</label>
-        <input type="number" id="stake" value="1.00" step="0.50">
-    </div>
+    ws.onopen = function() {
+        document.getElementById('connection-status').innerText = "Connected to Deriv! Authenticating...";
+        document.getElementById('connection-status').style.background = "#006622";
+        
+        // 1. Authenticate the session immediately upon connection
+        ws.send(JSON.stringify({ authorize: TOKEN }));
+    };
 
-    <div class="input-group">
-        <label>Last Digit Prediction (0-9)</label>
-        <input type="number" id="prediction" value="5" min="0" max="9">
-    </div>
+    ws.onmessage = function(msg) {
+        const data = JSON.parse(msg.data);
 
-    <div class="input-group">
-        <label>Trade Type</label>
-        <select id="trade-type">
-            <option value="DIGITMATCH">Matches</option>
-            <option value="DIGITDIFF">Differs</option>
-        </select>
-    </div>
+        // Handle successful authentication
+        if (data.msg_type === 'authorize') {
+            document.getElementById('connection-status').innerText = `Logged in as: ${data.authorize.email}`;
+            // 2. Start streaming ticks once authorized
+            startTickStream();
+        }
 
-    <!-- Action Button -->
-    <button class="btn" id="buy-btn">PURCHASE CONTRACT</button>
-</div>
+        // Handle incoming live tick data stream
+        if (data.msg_type === 'tick' && data.tick) {
+            currentTick = data.tick.quote;
+            const lastDigit = currentTick.toString().slice(-1);
+            
+            // Update the UI with the latest price and highlight the last digit
+            document.getElementById('tick-display').innerHTML = 
+                `${currentTick.slice(0, -1)}<span style="color: #ff4444; font-size: 40px;">${lastDigit}</span>`;
+        }
 
-<script>
-    // This is where our WebSocket JavaScript logic will live next!
-    console.log("UI Loaded. Ready for API connection script.");
-</script>
+        // Handle trade execution response
+        if (data.msg_type === 'buy') {
+            alert(`Trade Placed Successfully!\nContract ID: ${data.buy.contract_id}\nBalance Remaining: $${data.buy.balance_after}`);
+        }
 
-</body>
-</html>
+        // Handle any errors returned by Deriv's API
+        if (data.error) {
+            alert(`API Error: ${data.error.message}`);
+        }
+    };
+
+    ws.onclose = function() {
+        document.getElementById('connection-status').innerText = "Disconnected. Reconnecting...";
+        document.getElementById('connection-status').style.background = "#444400";
+        setTimeout(connectDeriv, 5000); // Try to reconnect in 5 seconds
+    };
+}
+
+// Function to subscribe to the selected Volatility Index tick stream
+function startTickStream() {
+    const selectedMarket = document.getElementById('market').value;
+    ws.send(JSON.stringify({
+        ticks: selectedMarket
+    }));
+}
+
+// Function to send a trade contract request (Matches/Differs)
+function purchaseContract() {
+    const market = document.getElementById('market').value;
+    const stake = document.getElementById('stake').value;
+    const prediction = document.getElementById('prediction').value;
+    const tradeType = document.getElementById('trade-type').value;
+
+    const tradePayload = {
+        amount: parseFloat(stake),
+        basis: "stake",
+        currency: "USD",
+        duration: 1,          // 1 tick duration
+        duration_unit: "t",   // 't' stands for ticks
+        proposal: 1,
+        symbol: market,
+        barrier: prediction,  // Your last digit prediction (0-9)
+        contract_type: tradeType // 'DIGITMATCH' or 'DIGITDIFF'
+    };
+
+    // Send the purchase request straight down the open socket line
+    ws.send(JSON.stringify({
+        buy: 1,
+        price: parseFloat(stake),
+        parameters: tradePayload
+    }));
+}
+
+// Listen for the market dropdown to change, so we switch the tick stream instantly
+document.getElementById('market').addEventListener('change', () => {
+    // Tell Deriv we want to forget the old stream, then start the new one
+    ws.send(JSON.stringify({ forget_all: "ticks" }));
+    startTickStream();
+});
+
+// Link the purchase function to your big red mobile button
+document.getElementById('buy-btn').addEventListener('click', purchaseContract);
+
+// Fire up the engine when the page opens!
+connectDeriv();
